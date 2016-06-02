@@ -5,7 +5,7 @@ TortoiseSVN is great. But it doesn't work on Linux. There are various other clie
 
 Still, it can be quite inconvenient at times. That's why I created `sub`. It's a set of additional utility commands to make certain tasks quicker to perform.
 
-It doesn't fundamentally enable you to do anything possible with regular `svn`. In fact, it uses your local `svn` client, it doesn't have its own Subversion library. But it does make life easier.
+It doesn't fundamentally enable you to do anything that you can't already do with regular `svn`. In fact, it uses your locally installed `svn` command, and doesn't have its own Subversion library. But it does make life easier.
 
 To install, clone or download anywhere, and it's ready to go. You could place it in your PATH (with a symlink `/usr/local/bin/sub`, for example) to make it easier to access. Run `sub help` for an overview of available commands.
 
