@@ -9,9 +9,13 @@
 import sys
 import subprocess
 
+# submodules
+import ilog
+import icommit
+
 if sys.version_info < (3,5):
-    print('Python >= 3.5 required')
-    exit(1)
+	print('Python >= 3.5 required')
+	exit(1)
 	
 def main():
 	
@@ -24,9 +28,14 @@ def main():
 	# run the given command
 	cmd(sys.argv[1] if len(sys.argv) >= 2 else "help", False, sys.argv[2:])
 	
-	
+# command shorthands
 def normalizeCmd(c):
-	if c == "gd": return "gdiff"
+	if c == "gd":
+		return "gdiff"
+	elif (c == "ici"
+		or c == "ist" 
+		or c == "istatus"):
+		return "icommit"
 	return c
 	
 def cmd(c, help, args):
@@ -70,6 +79,26 @@ def cmd_gdiff(help, args):
 		proc.extend(args)
 		subprocess.run(proc)
 	
-	
+def cmd_up(help, args):
+	if help:
+		print("TODO HELP")
+	else:
+		proc = ["svn","up"]
+		proc.extend(args)
+		subprocess.run(proc)
+		
+def cmd_ilog(help, args):
+	if help:
+		print("ilog: Interactive log")
+	else:
+		ilog.start(args)
+		
+def cmd_icommit(help, args):
+	if help:
+		print("icommit (ici): Interactive commit dialog")
+	else:
+		icommit.start(args)
+		
 # ---- END OF COMMANDS ---- #
+
 main()
