@@ -29,6 +29,7 @@ def run(*args, output=OUT_STD, wait=True):
 		cmd.append('--xml')
 	cmd.extend(args)
 	cmd = list(map(str, cmd))
+	util.log("svnwrap.run: ", cmd)
 	
 	if wait:
 			
