@@ -1,9 +1,9 @@
 import curses
-import subprocess
 import svn.local
 import sys
 
 import util
+import svnwrap
 	
 class revision:
 	
@@ -17,11 +17,10 @@ class revision:
 		self.ilog.renderAll()
 		
 	def launchGDiff(self):
-		proc = ["svn","diff","--diff-cmd","meld","--git",'-c',str(self.data.revision),'^' + self.selectedChange[1]]
-		subprocess.run(proc)
+		svnwrap.run('diff','--diff-cmd','meld','--git','--change',self.data.revision,'^' + self.selectedChange[1], wait=False)
 
 class ilog:
-
+	
 	logHeight = 10
 
 	def __init__(self, args):
@@ -43,10 +42,12 @@ class ilog:
 		colAuthor = 10
 		colMessage = 26
 		
-		curIndex = self.log.index(self.selectedEntry)
+		lst = self.log
+		sel = self.selectedEntry
+		curIndex = lst.index(sel)
 		offset = curIndex - int(self.logHeight / 2)
 		if offset < 0: offset = 0
-		if offset > len(self.log) - self.logHeight: offset = len(self.log) - self.logHeight
+		if offset > len(self.log) - self.logHeight: offset = len(lst) - self.logHeight
 		
 		for i in range(0, self.logHeight):
 			
@@ -58,7 +59,7 @@ class ilog:
 			
 			y = i
 			
-			attr = curses.A_REVERSE if entry == self.selectedEntry else 0
+			attr = curses.A_REVERSE if entry == sel else 0
 			
 			#util.log(str(entry))
 			
@@ -66,7 +67,8 @@ class ilog:
 			self.win.addnstr(y, colAuthor,   data.author,											   colMessage - colAuthor - 1,  attr)
 			self.win.addnstr(y, colMessage,  '' if data.msg == None else data.msg.replace('\n', ' ↵ '), width - colMessage,		 attr)
 			
-		self.win.addnstr(0, width-5, '#' + str(curIndex), 4, curses.A_REVERSE)
+		if sel != None:
+			self.win.addnstr(0, width-5, '#' + str(curIndex), 4, curses.A_REVERSE)
 		
 		
 		# --- changes --- #
@@ -102,11 +104,13 @@ class ilog:
 			self.win.addnstr(y, colType, change[0], colPath - colType - 1, attr)
 			self.win.addnstr(y, colPath, change[1], width - colPath,	   attr)
 			
-		self.win.addnstr(changesStart, width-5, '#' + str(curIndex), 4, curses.A_REVERSE)
+		if sel != None:
+			self.win.addnstr(changesStart, width-5, '#' + str(curIndex), 4, curses.A_REVERSE)
 		
 		# --- legend --- #
 
-		self.win.addnstr(height-1, 0, '[↑|↓] Select Revision    [O|L] Select Change    [G] GDiff    [Q] Quit', width, curses.A_REVERSE)
+		# width - 1 because writing the bottomrightmost character generates an error
+		self.win.addnstr(height-1, 0, '[↑|↓] Select Revision    [O|L] Select Change    [G] GDiff    [Q] Quit', width-1, curses.A_REVERSE)
 
 	def loop(self, win):
 				

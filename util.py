@@ -8,3 +8,4 @@ def navigateList(lst, cur, direction):
 def log(*str):
 	print(*str, file=sys.stderr)
 	sys.stderr.flush()
+	

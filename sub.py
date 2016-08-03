@@ -7,7 +7,7 @@
 #
 
 import sys
-import subprocess
+import svnwrap
 
 # submodules
 import ilog
@@ -20,8 +20,7 @@ if sys.version_info < (3,5):
 def main():
 	
 	# check svn presence and version
-	res = subprocess.run(["svn","--version","--quiet"], stdout=subprocess.PIPE)
-	version = res.stdout.decode("utf-8").replace("\n","");
+	version = svnwrap.run('--version','--quiet', output=svnwrap.OUT_TXT).replace("\n","");
 	if not version.startswith("1.9."):
 		print("WARNING - svn version is " + version + ", but sub was tested with 1.9")
 		
@@ -75,17 +74,17 @@ def cmd_gdiff(help, args):
 		print("  1. gdiff [OPTIONS...]")
 		print("     Shorthand for `svn diff --diff-cmd meld --git $OPTIONS`")
 	else:
-		proc = ["svn","diff","--diff-cmd","meld","--git"]
-		proc.extend(args)
-		subprocess.run(proc)
+		cmd = ['diff','--diff-cmd','meld','--git']
+		cmd.extend(args)
+		svnwrap.run(*cmd)
 	
 def cmd_up(help, args):
 	if help:
 		print("TODO HELP")
 	else:
-		proc = ["svn","up"]
-		proc.extend(args)
-		subprocess.run(proc)
+		cmd = ['up']
+		cmd.extend(args)
+		svnwrap.run(*cmd)
 		
 def cmd_ilog(help, args):
 	if help:
