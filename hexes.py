@@ -1,6 +1,63 @@
 import curses
 import util
 
+class textarea:
+	
+	text = ['']
+	
+	def __init__(self):
+		pass
+		
+	def render(self, win, y, x, width, height):
+		yy = y
+		for l, line in enumerate(self.text):
+			util.log('line', line)
+			ll = line
+			first = True
+			while True:
+				
+				if yy >= y + height:
+					win.addnstr(y+height-1, x, 'Too long text!!', width, curses.A_REVERSE)
+					break
+				
+				if first:
+					pref = str(l)
+					first = False
+				else:
+					pref = ''
+				win.addnstr(yy, x, pref.rjust(3), 3, curses.A_REVERSE)
+				
+				util.log('ll', len(ll), ll)
+				theresMore = len(ll) > width-4
+				if theresMore:
+					rl = ll[:width-4]
+					ll = ll[width-4:]
+				else:
+					rl = ll
+				util.log('rl', rl)
+				win.addnstr(yy, x+4, rl, width-4)
+				yy += 1
+				if not theresMore: break
+				
+			if yy >= y + height:
+				break
+		
+	def get_text(self):
+		return '\n'.join(self.text)
+		
+	def input(self, ch):
+		if ch == curses.KEY_BACKSPACE:
+			if self.text[-1] == '':
+				if len(self.text) != 1:
+					self.text = self.text[:-1]
+			else:
+				self.text[-1] = self.text[-1][:-1]
+		elif ch == ord('\n'):
+			self.text.append('')
+		else:
+			self.text[-1] += chr(ch)
+		
+
 def fill_line(win, y, x, width, attr=0, char=' '):
 	fill_rect(win, y, x, 1, width, attr=attr, char=char)
 

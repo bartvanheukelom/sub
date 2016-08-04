@@ -16,7 +16,7 @@ class change:
 	def __init__(self, icommit, data):
 		self.icommit = icommit
 		self.data = data
-		self.marked = data['status'] != 'unversioned'
+		self.marked = False #data['status'] != 'unversioned'
 
 	def toggleMarked(self):
 		self.marked = not self.marked
@@ -30,7 +30,7 @@ class icommit:
 	
 	state = STATE_NORMAL
 	tempStatusBar = None
-	commitMessage = ''
+	commitMessage = hexes.textarea()
 	
 	def __init__(self, args):
 		self.args = args
@@ -76,11 +76,7 @@ class icommit:
 		# --- commit message --- #
 		if self.state == self.STATE_PRE_COMMIT or self.state == self.STATE_COMMIT_MESSAGE:
 			hexes.border(self.win, 0, 0, height-1, width, header='Commit Message', clear=True)			
-			for l, line in enumerate(self.commitMessage.split('\n')):
-				self.win.addnstr(1+l, 1, line, width-2)
-				cursorY = 1+l
-				cursorX = 1 + len(line)
-
+			self.commitMessage.render(self.win, 1, 1, width-2, height-3)
 
 		# --- status bar --- #
 
@@ -119,8 +115,9 @@ class icommit:
 		for c in self.changes:
 			if c.marked:
 				cmd.append(c.data['path'])
-		cmd.extend(['--message', self.commitMessage])
+		cmd.extend(['--message', self.commitMessage.get_text()])
 		svnwrap.run(*cmd, output=svnwrap.OUT_TXT)
+		#util.log('COMMIT NOT', cmd)
 	
 	def loadStatus(self):
 		self.changes = list(map(lambda c: change(self, c), svnwrap.status()))
@@ -169,10 +166,8 @@ class icommit:
 				elif self.state == self.STATE_COMMIT_MESSAGE:
 					if ch == 4: # Ctrl-D
 						self.state = self.STATE_PRE_COMMIT
-					elif ch == curses.KEY_BACKSPACE:
-						self.commitMessage = self.commitMessage[:-1]
 					else:
-						self.commitMessage += chr(ch)
+						self.commitMessage.input(ch)
 				# normal state	
 				else:
 					if ch == curses.KEY_DOWN:
