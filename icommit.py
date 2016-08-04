@@ -4,12 +4,7 @@ import sys
 import svnwrap
 import util
 import hexes
-
-statusCodes = {
-	'modified': 'M',
-	'unversioned': '?',
-	'added': 'A'
-}
+import iutil
 
 class change:
 	
@@ -30,7 +25,7 @@ class icommit:
 	
 	state = STATE_NORMAL
 	tempStatusBar = None
-	commitMessage = hexes.textarea()
+	commitMessage = hexes.TextArea()
 	
 	def __init__(self, args):
 		self.args = args
@@ -48,30 +43,19 @@ class icommit:
 		
 		# --- change list --- #
 		
-		changesStart = 0
-		
 		colMark = 0
 		colType = colMark+3
 		colPath = colType+3
 		
-		lst = self.changes
-		sel = self.selectedChange
-		curIndex = 0 if sel == None else lst.index(sel)
-		
-		for i, change in enumerate(lst):
-			y = i + changesStart
-			if y >= height-1:
-				self.win.addnstr(height-2, 0, '        TOO MANY CHANGES                               ', width - 1, curses.A_REVERSE)
-				break
-			
-			attr = curses.A_REVERSE if change == sel else 0
+		def render_change(y, change, is_sel):
+			attr = curses.A_REVERSE if is_sel else 0
+			if is_sel:
+				hexes.fill_line(self.win, y, 0, width, curses.A_REVERSE)
 			
 			self.win.addnstr(y, colMark, '✓' if change.marked else '',       colType - colMark - 1, attr)
-			self.win.addnstr(y, colType, statusCodes[change.data['status']], colPath - colType - 1, attr)
+			self.win.addnstr(y, colType, svnwrap.status_codes.get(change.data['status'], '#'), colPath - colType - 1, attr)
 			self.win.addnstr(y, colPath, change.data['path'],                width - colPath,       attr)
-			
-		if sel != None:
-			self.win.addnstr(changesStart, width-5, '#' + str(curIndex), 4, curses.A_REVERSE)
+		iutil.render_list(self.win, self.changes, self.selectedChange, 0, height-1, width, render_change)
 
 		# --- commit message --- #
 		if self.state == self.STATE_PRE_COMMIT or self.state == self.STATE_COMMIT_MESSAGE:

@@ -4,7 +4,8 @@ import sys
 
 import util
 import svnwrap
-	
+import iutil
+
 class revision:
 	
 	def __init__(self, ilog, data):
@@ -41,72 +42,30 @@ class ilog:
 		colRevision = 0
 		colAuthor = 10
 		colMessage = 26
-		
-		lst = self.log
-		sel = self.selectedEntry
-		curIndex = lst.index(sel)
-		offset = curIndex - int(self.logHeight / 2)
-		if offset < 0: offset = 0
-		if offset > len(self.log) - self.logHeight: offset = len(lst) - self.logHeight
-		
-		for i in range(0, self.logHeight):
-			
-			io = i + offset
-			if io < 0 or io >= len(self.log):
-				continue
-			entry = self.log[io]
+
+		def render_revision(y, entry, is_sel):
 			data = entry.data
-			
-			y = i
-			
-			attr = curses.A_REVERSE if entry == sel else 0
-			
-			#util.log(str(entry))
-			
-			self.win.addnstr(y, colRevision, str(data.revision),										colAuthor - colRevision - 1, attr)
-			self.win.addnstr(y, colAuthor,   data.author,											   colMessage - colAuthor - 1,  attr)
-			self.win.addnstr(y, colMessage,  '' if data.msg == None else data.msg.replace('\n', ' ↵ '), width - colMessage,		 attr)
-			
-		if sel != None:
-			self.win.addnstr(0, width-5, '#' + str(curIndex), 4, curses.A_REVERSE)
-		
+			attr = curses.A_REVERSE if is_sel else 0
+			self.win.addnstr(y, colRevision, str(data.revision), colAuthor - colRevision - 1, attr)
+			self.win.addnstr(y, colAuthor,   data.author, colMessage - colAuthor - 1, attr)
+			self.win.addnstr(y, colMessage,  '' if data.msg == None else data.msg.replace('\n', ' ↵ '), width - colMessage, attr)
+		iutil.render_list(self.win, self.log, self.selectedEntry, 0, self.logHeight, width, render_revision)		
 		
 		# --- changes --- #
 		
 		self.win.addnstr(self.logHeight, 0, '-------------------------------------', width)
-		changesStart = self.logHeight + 1
-		
+
 		colType = 0
 		colPath = 4
 		
-		lst = self.selectedEntry.data.changelist
-		sel = self.selectedEntry.selectedChange
-		curIndex = 0 if sel == None else lst.index(sel)
-		changesHeight = height - changesStart - 1
-		offset = curIndex - int(changesHeight / 2)
-		if offset < 0: offset = 0
-		if offset > len(lst) - changesHeight: offset = len(lst) - changesHeight
-		
-		for i in range(0, changesHeight):
-			
-			io = i + offset
-			if io < 0 or io >= len(lst):
-				continue
-			change = lst[io]
-			
-			y = i + changesStart
-			if y >= height-1:
-				util.log('Too many changes')
-				break
-			
-			attr = curses.A_REVERSE if change == sel else 0
-			
+		def render_change(y, change, is_sel):
+			attr = curses.A_REVERSE if is_sel else 0
 			self.win.addnstr(y, colType, change[0], colPath - colType - 1, attr)
 			self.win.addnstr(y, colPath, change[1], width - colPath,	   attr)
-			
-		if sel != None:
-			self.win.addnstr(changesStart, width-5, '#' + str(curIndex), 4, curses.A_REVERSE)
-		
+		iutil.render_list(self.win,
+			self.selectedEntry.data.changelist, self.selectedEntry.selectedChange,
+			self.logHeight+1, height - self.logHeight - 2, width, render_change)
+
 		# --- legend --- #
 
 		# width - 1 because writing the bottomrightmost character generates an error

@@ -7,6 +7,13 @@ OUT_XML = 1
 OUT_STD = 2
 OUT_TXT = 3
 
+status_codes = {
+	'modified': 'M',
+	'unversioned': '?',
+	'added': 'A',
+	'missing': '!'
+}
+
 def status():
 	output = run('status', output=OUT_XML)
 	ret = []

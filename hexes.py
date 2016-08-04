@@ -1,7 +1,7 @@
 import curses
 import util
 
-class textarea:
+class TextArea:
 	
 	text = ['']
 	
