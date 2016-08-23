@@ -62,7 +62,7 @@ def cmd_help(help, args):
 	else:
 		if len(args) == 0:
 			print("Sub - utility commands for Subversion")
-			print("Commands: help, gdiff (gd)")
+			print("Commands: help, gdiff (gd), up, ilog, icommit (ici, istatus, ist)")
 			print("Run `help COMMAND` to get help for one of these.")
 		else:
 			cmd(args[0], True, None)

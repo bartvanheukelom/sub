@@ -6,6 +6,6 @@ def navigateList(lst, cur, direction):
 	return lst[(curIndex + direction) % len(lst)]
 
 def log(*str):
-	print(*str, file=sys.stderr)
+	print('[log-todo-in-file]', *str, file=sys.stderr)
 	sys.stderr.flush()
 	
