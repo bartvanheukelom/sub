@@ -84,7 +84,11 @@ class ilog:
 			limit = int(self.args[0])
 		except IndexError:
 			limit = 32
-		svnClient = svn.local.LocalClient('.')
+		try:
+			filter = self.args[1]
+		except IndexError:
+			filter = '.'
+		svnClient = svn.local.LocalClient(filter)
 		self.log = list(map(lambda d: revision(self, d), svnClient.log_default(limit=limit, changelist=True)))
 		
 		if len(self.log) == 0:

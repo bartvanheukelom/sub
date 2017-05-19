@@ -19,12 +19,14 @@ class change:
 class icommit:
 	
 	STATE_NORMAL = 'normal'
-	STATE_REVERT_CONFIRM = 'revertConfirm'
+	STATE_CONFIRM = 'confirm'
 	STATE_PRE_COMMIT = 'preCommit'
 	STATE_COMMIT_MESSAGE = 'commitMessage'
 	
 	state = STATE_NORMAL
 	tempStatusBar = None
+	confirmQuestion = None
+	confirmAction = None
 	commitMessage = hexes.TextArea()
 	
 	def __init__(self, args):
@@ -57,32 +59,50 @@ class icommit:
 			self.win.addnstr(y, colPath, change.data['path'],                width - colPath,       attr)
 		iutil.render_list(self.win, self.changes, self.selectedChange, 0, height-1, width, render_change)
 
-		# --- commit message --- #
-		if self.state == self.STATE_PRE_COMMIT or self.state == self.STATE_COMMIT_MESSAGE:
-			hexes.border(self.win, 0, 0, height-1, width, header='Commit Message', clear=True)			
-			self.commitMessage.render(self.win, 1, 1, width-2, height-3)
-
 		# --- status bar --- #
 
 		if self.tempStatusBar != None:
 			statusBar = self.tempStatusBar + ' (press any key to dismiss...)'
-		elif self.state == self.STATE_REVERT_CONFIRM:
-			statusBar = '[Y] Confirm revert    [Other] Cancel    [Q] Quit'
+		elif self.state == self.STATE_CONFIRM:
+			statusBar = ''
 		elif self.state == self.STATE_PRE_COMMIT:
 			statusBar = '[Y] Commit    [N] Not yet    [E] Edit message    [Q] Quit'
 		elif self.state == self.STATE_COMMIT_MESSAGE:
 			statusBar = '[Ctrl+D] Stop editing'
 		else:
-			statusBar = '[↑|↓] Select  [Space] Mark  [C]ommit...  [A]dd  [R]evert  [G]Diff  [Q]uit'
+			statusBar = '[↑|↓] Select  [Space] Mark  [C]ommit...  '
+			if self.selectedChange:
+				if self.selectedChange.data['status'] == 'unversioned': statusBar += '[A]dd  '
+				if self.selectedChange.data['status'] != 'unversioned': statusBar += '[R]evert  '
+				statusBar += '[G]Diff  '
+			statusBar += '[Q]uit'
 		
 		# width - 1 because writing the bottomrightmost character generates an error
 		hexes.fill_line(self.win, height-1, 0, width-1, attr=curses.A_REVERSE)
 		self.win.addnstr(height-1, 0, statusBar, width-1, curses.A_REVERSE)
+
+		# --- confirm dialog --- #
+		if self.state == self.STATE_CONFIRM:
+			pad = 5
+			top = int(height/2) - 2
+			w = min(len(self.confirmQuestion), width-2-(2*pad))
+			center = int(width/2)
+			left = center - int(w/2)
+			hexes.border(self.win, top, left, 4, w+2, 'Revert', clear=True)
+			self.win.addnstr(top+1, 1+left, self.confirmQuestion, w)
+			buttons = '[Y]es   [N]o'
+			self.win.addnstr(top+2, 1+center-int(len(buttons)/2), buttons, w, curses.A_REVERSE)
 		
-		
-		self.win.move(cursorY, cursorX)
+		# --- commit message --- #
+		if self.state == self.STATE_PRE_COMMIT or self.state == self.STATE_COMMIT_MESSAGE:
+			hexes.border(self.win, 0, 0, height-1, width, header='Commit Message', clear=True)			
+			self.commitMessage.render(self.win, 1, 1, width-2, height-3)
+
+		else:
+			self.win.move(cursorY, cursorX)
+
 		self.win.refresh()
-		
+
 	def launchGDiff(self):
 		svnwrap.run('diff','--diff-cmd','meld','--git',self.selectedChange.data['path'], wait=False)
 		
@@ -102,10 +122,16 @@ class icommit:
 		cmd.extend(['--message', self.commitMessage.get_text()])
 		svnwrap.run(*cmd, output=svnwrap.OUT_TXT)
 		#util.log('COMMIT NOT', cmd)
+		self.loadStatus()
 	
 	def loadStatus(self):
 		self.changes = list(map(lambda c: change(self, c), svnwrap.status()))
 		self.selectedChange = None
+
+	def confirm(self, question, action):
+		self.state = self.STATE_CONFIRM
+		self.confirmQuestion = question
+		self.confirmAction = action
 		
 	def loop(self, win):
 		self.win = win
@@ -117,12 +143,14 @@ class icommit:
 			
 			self.renderAll()
 			
+			# wait for input
 			ch = win.getch()
 			try:
 				char = chr(ch)
 			except ValueError:
 				char = None
 			
+
 			self.tempStatusBar = None
 			
 			typing = self.state == self.STATE_COMMIT_MESSAGE
@@ -133,10 +161,15 @@ class icommit:
 				pass
 			else:
 				
-				if self.state == self.STATE_REVERT_CONFIRM:
-					self.state = self.STATE_NORMAL
+				if self.state == self.STATE_CONFIRM:
+					
 					if ch == 121: # Y
-						self.revert()
+						self.confirmAction()
+
+					if ch == 121 or ch == 110: # Y or N
+						self.state = self.STATE_NORMAL
+						self.confirmQuestion = None
+						self.confirmAction = None
 				
 				elif self.state == self.STATE_PRE_COMMIT:
 					if ch == 121: # Y
@@ -167,7 +200,8 @@ class icommit:
 					elif ch == 97: # A
 						self.add()
 					elif ch == 114: # R
-						self.state = self.STATE_REVERT_CONFIRM
+						revertFile = self.selectedChange.data['path']
+						self.confirm("Revert '" + revertFile + "'?", lambda self: self.revert(revertFile))
 					elif ch == curses.KEY_F5:
 						self.loadStatus()
 					elif ch == 32: # space

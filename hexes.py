@@ -1,3 +1,5 @@
+# Hexes - tools for Curses
+
 import curses
 import util
 
@@ -9,6 +11,9 @@ class TextArea:
 		pass
 		
 	def render(self, win, y, x, width, height):
+
+		leftpad = 4
+
 		yy = y
 		for l, line in enumerate(self.text):
 			util.log('line', line)
@@ -25,23 +30,25 @@ class TextArea:
 					first = False
 				else:
 					pref = ''
-				win.addnstr(yy, x, pref.rjust(3), 3, curses.A_REVERSE)
+				win.addnstr(yy, x, pref.rjust(leftpad-1), leftpad-1, curses.A_REVERSE)
 				
 				util.log('ll', len(ll), ll)
-				theresMore = len(ll) > width-4
+				theresMore = len(ll) > width-leftpad
 				if theresMore:
-					rl = ll[:width-4]
-					ll = ll[width-4:]
+					rl = ll[:width-leftpad]
+					ll = ll[width-leftpad:]
 				else:
 					rl = ll
 				util.log('rl', rl)
-				win.addnstr(yy, x+4, rl, width-4)
+				win.addnstr(yy, x+leftpad, rl, width-leftpad)
 				yy += 1
 				if not theresMore: break
 				
 			if yy >= y + height:
 				break
 		
+		#win.move(yy, x)
+
 	def get_text(self):
 		return '\n'.join(self.text)
 		

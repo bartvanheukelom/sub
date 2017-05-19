@@ -8,10 +8,17 @@ OUT_STD = 2
 OUT_TXT = 3
 
 status_codes = {
+	'none': ' ',
 	'modified': 'M',
 	'unversioned': '?',
 	'added': 'A',
-	'missing': '!'
+	'missing': '!',
+	'deleted': 'D',
+	'replaced': 'R',
+	'conflicted': 'C',
+	'external': 'X',
+	'ignored': 'I',
+	'merged': 'G'
 }
 
 def status():
