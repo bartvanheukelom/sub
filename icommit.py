@@ -110,8 +110,8 @@ class icommit:
 		svnwrap.run('add',self.selectedChange.data['path'])
 		self.loadStatus()
 		
-	def revert(self):
-		svnwrap.run('revert',self.selectedChange.data['path'], output=svnwrap.OUT_TXT)
+	def revert(self, path):
+		svnwrap.run('revert', path, output=svnwrap.OUT_TXT)
 		self.loadStatus()
 	
 	def commit(self):
@@ -201,7 +201,7 @@ class icommit:
 						self.add()
 					elif ch == 114: # R
 						revertFile = self.selectedChange.data['path']
-						self.confirm("Revert '" + revertFile + "'?", lambda self: self.revert(revertFile))
+						self.confirm("Revert '" + revertFile + "'?", lambda: self.revert(revertFile))
 					elif ch == curses.KEY_F5:
 						self.loadStatus()
 					elif ch == 32: # space
