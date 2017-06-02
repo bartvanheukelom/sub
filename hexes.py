@@ -16,7 +16,7 @@ class TextArea:
 
 		yy = y
 		for l, line in enumerate(self.text):
-			util.log('line', line)
+			# util.log('line', line)
 			ll = line
 			first = True
 			while True:
@@ -32,14 +32,14 @@ class TextArea:
 					pref = ''
 				win.addnstr(yy, x, pref.rjust(leftpad-1), leftpad-1, curses.A_REVERSE)
 				
-				util.log('ll', len(ll), ll)
+				# util.log('ll', len(ll), ll)
 				theresMore = len(ll) > width-leftpad
 				if theresMore:
 					rl = ll[:width-leftpad]
 					ll = ll[width-leftpad:]
 				else:
 					rl = ll
-				util.log('rl', rl)
+				# util.log('rl', rl)
 				win.addnstr(yy, x+leftpad, rl, width-leftpad)
 				yy += 1
 				if not theresMore: break
@@ -47,8 +47,6 @@ class TextArea:
 			if yy >= y + height:
 				break
 		
-		#win.move(yy, x)
-
 	def get_text(self):
 		return '\n'.join(self.text)
 		

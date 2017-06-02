@@ -64,7 +64,7 @@ class icommit:
 		if self.tempStatusBar != None:
 			statusBar = self.tempStatusBar + ' (press any key to dismiss...)'
 		elif self.state == self.STATE_CONFIRM:
-			statusBar = ''
+			statusBar = '[Q]uit'
 		elif self.state == self.STATE_PRE_COMMIT:
 			statusBar = '[Y] Commit    [N] Not yet    [E] Edit message    [Q] Quit'
 		elif self.state == self.STATE_COMMIT_MESSAGE:
@@ -98,7 +98,7 @@ class icommit:
 			hexes.border(self.win, 0, 0, height-1, width, header='Commit Message', clear=True)			
 			self.commitMessage.render(self.win, 1, 1, width-2, height-3)
 
-		else:
+		if self.state != self.STATE_COMMIT_MESSAGE:
 			self.win.move(cursorY, cursorX)
 
 		self.win.refresh()
@@ -125,6 +125,7 @@ class icommit:
 		self.loadStatus()
 	
 	def loadStatus(self):
+		# TODO update instead of replace (preserve marked)
 		self.changes = list(map(lambda c: change(self, c), svnwrap.status()))
 		self.selectedChange = None
 
