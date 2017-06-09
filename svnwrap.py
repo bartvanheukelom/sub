@@ -21,6 +21,10 @@ status_codes = {
 	'merged': 'G'
 }
 
+def info():
+	output = run('info', output=OUT_XML)
+	return output
+
 def status():
 	output = run('status', output=OUT_XML)
 	ret = []
@@ -31,6 +35,22 @@ def status():
 				'status': entry.find('wc-status').get('item')
 			})
 			
+	return ret
+
+def ls(url):
+	output = run('ls', url, output=OUT_XML)
+	ret = []
+	for file in output.find('list').iter('entry'):
+		util.log(ET.tostring(file))
+		ret.append({
+			'name': file.find('name').text,
+			'kind': file.get('kind'),
+			'revision': file.find('commit').get('revision'),
+			'author': file.find('commit').find('author').text,
+			'date': file.find('commit').find('date').text
+			# TODO file size
+		})
+	util.log('asdasdasd', ret)
 	return ret
 	
 def run(*args, output=OUT_STD, wait=True):

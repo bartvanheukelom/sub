@@ -1,8 +1,11 @@
 import curses
 import hexes
+import util
 
 def render_list(win, lst, sel, listStart, listHeight, width, render_entry):
     
+    util.log('render_list', lst)
+
     # selected index
     curIndex = 0 if sel == None else lst.index(sel)
 

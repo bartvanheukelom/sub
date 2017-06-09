@@ -1,10 +1,12 @@
 import curses
 import svn.local
+import svn.remote
 import sys
 
 import util
 import svnwrap
 import iutil
+import hexes
 
 class revision:
 	
@@ -26,7 +28,6 @@ class ilog:
 
 	def __init__(self, args):
 		self.args = args
-		curses.wrapper(self.loop)
 		
 	def moveSelection(self, direction):
 		self.selectedEntry = util.navigateList(self.log, self.selectedEntry, direction)
@@ -46,6 +47,8 @@ class ilog:
 		def render_revision(y, entry, is_sel):
 			data = entry.data
 			attr = curses.A_REVERSE if is_sel else 0
+			if is_sel:
+				hexes.fill_line(self.win, y, 0, width, curses.A_REVERSE)
 			self.win.addnstr(y, colRevision, str(data.revision), colAuthor - colRevision - 1, attr)
 			self.win.addnstr(y, colAuthor,   data.author, colMessage - colAuthor - 1, attr)
 			self.win.addnstr(y, colMessage,  '' if data.msg == None else data.msg.replace('\n', ' ↵ '), width - colMessage, attr)
@@ -75,20 +78,22 @@ class ilog:
 				
 		self.win = win
 		
-		win.addstr('This will be log ' + str(self.args) + '\n')
-		win.addstr('Loading...\n')
-		win.refresh()
+		self.win.clear()
+		util.log('This will be log ' + str(self.args) + '\n')
+		self.win.addstr('This will be log ' + str(self.args) + '\n')
+		self.win.addstr('Loading...\n')
+		self.win.refresh()
 		
 		# load the log
 		try:
-			limit = int(self.args[0])
+			limit = int(self.args[1])
 		except IndexError:
 			limit = 32
 		try:
-			filter = self.args[1]
+			filter = self.args[0]
 		except IndexError:
 			filter = '.'
-		svnClient = svn.local.LocalClient(filter)
+		svnClient = svn.remote.RemoteClient(filter) if filter.startswith('svn://') else svn.local.LocalClient(filter)
 		self.log = list(map(lambda d: revision(self, d), svnClient.log_default(limit=limit, changelist=True)))
 		
 		if len(self.log) == 0:
@@ -124,4 +129,5 @@ class ilog:
 			win.refresh()
 
 def start(args):
-	ilog(args)
+	i = ilog(args)
+	curses.wrapper(i.loop)

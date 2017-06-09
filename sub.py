@@ -12,6 +12,7 @@ import svnwrap
 # submodules
 import ilog
 import icommit
+import browse
 
 if sys.version_info < (3,5):
 	print('Python >= 3.5 required')
@@ -35,6 +36,8 @@ def normalizeCmd(c):
 		or c == "ist" 
 		or c == "istatus"):
 		return "icommit"
+	elif (c == "ls"):
+		return "browse"
 	return c
 	
 def cmd(c, help, args):
@@ -62,7 +65,7 @@ def cmd_help(help, args):
 	else:
 		if len(args) == 0:
 			print("Sub - utility commands for Subversion")
-			print("Commands: help, gdiff (gd), up, ilog, icommit (ici, istatus, ist)")
+			print("Commands: help, gdiff (gd), up, ilog, icommit (ici, istatus, ist), browse (ls)")
 			print("Run `help COMMAND` to get help for one of these.")
 		else:
 			cmd(args[0], True, None)
@@ -97,6 +100,12 @@ def cmd_icommit(help, args):
 		print("icommit (ici): Interactive commit dialog")
 	else:
 		icommit.start(args)
+
+def cmd_browse(help, args):
+	if help:
+		print("browse: Repo browser")
+	else:
+		browse.start(args)
 		
 # ---- END OF COMMANDS ---- #
 
