@@ -54,9 +54,9 @@ class icommit:
 			if is_sel:
 				hexes.fill_line(self.win, y, 0, width, curses.A_REVERSE)
 			
-			self.win.addnstr(y, colMark, '✓' if change.marked else '',       colType - colMark - 1, attr)
+			self.win.addnstr(y, colMark, '✓' if change.marked else '', colType - colMark, attr)
 			self.win.addnstr(y, colType, svnwrap.status_codes.get(change.data['status'], '#'), colPath - colType - 1, attr)
-			self.win.addnstr(y, colPath, change.data['path'],                width - colPath,       attr)
+			self.win.addnstr(y, colPath, change.data['path'], width - colPath, attr)
 		iutil.render_list(self.win, self.changes, self.selectedChange, 0, height-1, width, render_change)
 
 		# --- status bar --- #
