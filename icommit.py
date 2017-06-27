@@ -70,7 +70,7 @@ class icommit:
 		if self.tempStatusBar != None:
 			statusBar = self.tempStatusBar + ' (press any key to dismiss...)'
 		elif self.state == self.STATE_CONFIRM:
-			statusBar = '[Q]uit'
+			statusBar = '[Y]es  [N]o  [Q]uit  '
 		elif self.state == self.STATE_PRE_COMMIT:
 			statusBar = '[Y] Commit    [N] Not yet    [E] Edit message    [Q] Quit'
 		elif self.state == self.STATE_COMMIT_MESSAGE:
@@ -169,13 +169,16 @@ class icommit:
 				
 				if self.state == self.STATE_CONFIRM:
 					
+					intermezzo = None
 					if ch == 121: # Y
-						self.confirmAction()
+						intermezzo = self.confirmAction()
 
 					if ch == 121 or ch == 110: # Y or N
 						self.state = self.STATE_NORMAL
 						self.confirmQuestion = None
 						self.confirmAction = None
+
+					if intermezzo: return intermezzo
 				
 				elif self.state == self.STATE_PRE_COMMIT:
 					if ch == 121: # Y
@@ -219,7 +222,7 @@ class icommit:
 							svnwrap.run('update')
 							print('Press enter to dismiss...')
 							input()
-						return update_intermezzo
+						self.confirm('Are you sure you want to update?', lambda: update_intermezzo)
 					else:
 						self.tempStatusBar = 'Unknown key ' + str(ch)
 			
