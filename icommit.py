@@ -11,10 +11,12 @@ class change:
 	def __init__(self, icommit, data):
 		self.icommit = icommit
 		self.data = data
-		self.marked = False #data['status'] != 'unversioned'
 
 	def toggleMarked(self):
-		self.marked = not self.marked
+		self.icommit.markedChanges ^= {self.data['path']}
+
+	def marked(self):
+		return self.data['path'] in self.icommit.markedChanges
 
 class icommit:
 	
@@ -31,7 +33,11 @@ class icommit:
 	
 	def __init__(self, args):
 		self.args = args
-		curses.wrapper(self.loop)
+		self.markedChanges = set()
+		while True:
+			intermezzo = curses.wrapper(self.loop)
+			if not intermezzo: break
+			intermezzo()
 		
 	def moveSelection(self, direction):
 		self.selectedChange = util.navigateList(self.changes, self.selectedChange, direction)
@@ -54,7 +60,7 @@ class icommit:
 			if is_sel:
 				hexes.fill_line(self.win, y, 0, width, curses.A_REVERSE)
 			
-			self.win.addnstr(y, colMark, '✓' if change.marked else '', colType - colMark, attr)
+			self.win.addnstr(y, colMark, '✓' if change.marked() else '', colType - colMark, attr)
 			self.win.addnstr(y, colType, svnwrap.status_codes.get(change.data['status'], '#'), colPath - colType - 1, attr)
 			self.win.addnstr(y, colPath, change.data['path'], width - colPath, attr)
 		iutil.render_list(self.win, self.changes, self.selectedChange, 0, height-1, width, render_change)
@@ -70,7 +76,7 @@ class icommit:
 		elif self.state == self.STATE_COMMIT_MESSAGE:
 			statusBar = '[Ctrl+D] Stop editing'
 		else:
-			statusBar = '[↑|↓] Select  [Space] Mark  [C]ommit...  '
+			statusBar = '[↑|↓] Select  [Space] Mark  [C]ommit...  [F5] Refresh  [U]pdate  '
 			if self.selectedChange:
 				if self.selectedChange.data['status'] == 'unversioned': statusBar += '[A]dd  '
 				if self.selectedChange.data['status'] != 'unversioned': statusBar += '[R]evert  '
@@ -117,15 +123,14 @@ class icommit:
 	def commit(self):
 		cmd = ['commit']
 		for c in self.changes:
-			if c.marked:
+			if c.marked():
 				cmd.append(c.data['path'])
 		cmd.extend(['--message', self.commitMessage.get_text()])
 		svnwrap.run(*cmd, output=svnwrap.OUT_TXT)
-		#util.log('COMMIT NOT', cmd)
 		self.loadStatus()
 	
 	def loadStatus(self):
-		# TODO update instead of replace (preserve marked)
+		# TODO update instead of replace
 		self.changes = list(map(lambda c: change(self, c), svnwrap.status()))
 		self.selectedChange = None
 
@@ -209,6 +214,12 @@ class icommit:
 						self.selectedChange.toggleMarked()
 					elif char == 'c':
 						self.state = self.STATE_COMMIT_MESSAGE
+					elif char == 'u':
+						def update_intermezzo():
+							svnwrap.run('update')
+							print('Press enter to dismiss...')
+							input()
+						return update_intermezzo
 					else:
 						self.tempStatusBar = 'Unknown key ' + str(ch)
 			
