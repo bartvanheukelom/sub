@@ -10,7 +10,9 @@ class TextArea:
 	def __init__(self):
 		pass
 		
-	def render(self, win, y, x, width, height):
+	def render(self, win, y, x, width, height, focused):
+
+		dim = 0 if focused else curses.A_DIM
 
 		leftpad = 4
 
@@ -30,7 +32,7 @@ class TextArea:
 					first = False
 				else:
 					pref = ''
-				win.addnstr(yy, x, pref.rjust(leftpad-1), leftpad-1, curses.A_REVERSE)
+				win.addnstr(yy, x, pref.rjust(leftpad-1), leftpad-1, curses.A_REVERSE | dim)
 				
 				# util.log('ll', len(ll), ll)
 				theresMore = len(ll) > width-leftpad

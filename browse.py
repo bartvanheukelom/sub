@@ -83,7 +83,7 @@ class browse:
 			'author': '?',
 			'date': '?'
 		})
-		self.selectedFile = None
+		self.selectedFile = self.files[0]
 		
 	def loop(self, win):
 		self.win = win
