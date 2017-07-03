@@ -28,6 +28,7 @@ class icommit:
 	
 	state = STATE_NORMAL
 	tempStatusBar = None
+	tempMessage = None
 	confirmQuestion = None
 	confirmAction = None
 	commitMessage = hexes.TextArea()
@@ -35,7 +36,11 @@ class icommit:
 	def __init__(self, args):
 		self.args = args
 		self.path = os.getcwd()
+		self.changes = []
+		self.selectedChange = None
 		self.markedChanges = set()
+		self.info = None
+		self.onlyMarked = False
 		while True:
 			intermezzo = curses.wrapper(self.loop)
 			if not intermezzo: break
@@ -44,25 +49,25 @@ class icommit:
 			input()
 		
 	def moveSelection(self, direction):
-		self.selectedChange = util.navigateList(self.changes, self.selectedChange, direction)
+		self.selectedChange = util.navigateList(self.visibleChanges(), self.selectedChange, direction)
 		
-	def renderAll(self):
+	def render(self):
 		self.win.clear()
 		height, width = self.win.getmaxyx()		
 		
 		cursorX = width-1
 		cursorY = height-1
 		
-		info = self.info.find('entry')
-
 		hexes.fill_line(self.win, 0, 0, width, curses.A_REVERSE)
 		self.win.addnstr(0, 0, self.path, width, curses.A_REVERSE)
+		if self.info:
+			info = self.info.find('entry')
+			root = info.find('repository').find('root').text
+			relative = info.find('relative-url').text
+			rev = info.find('commit').get('revision')
+			hexes.fill_line(self.win, 1, 0, width, curses.A_REVERSE)
+			self.win.addnstr(1, 0, root + '/' + '/'.join(relative.split('/')[1:]) + ' @ ' + rev, width, curses.A_REVERSE)
 		
-		root = info.find('repository').find('root').text
-		relative = info.find('relative-url').text
-		rev = info.find('commit').get('revision')
-		hexes.fill_line(self.win, 1, 0, width, curses.A_REVERSE)
-		self.win.addnstr(1, 0, root + '/' + '/'.join(relative.split('/')[1:]) + ' @ ' + rev, width, curses.A_REVERSE)
 
 		# --- change list --- #
 		
@@ -70,6 +75,9 @@ class icommit:
 		colType = colMark+3
 		colPath = colType+3
 		
+
+		changes = self.visibleChanges()
+
 		def render_change(y, change, is_sel):
 			attr = curses.A_DIM if self.state != self.STATE_NORMAL else (curses.A_REVERSE if is_sel else 0)
 			if is_sel:
@@ -78,7 +86,7 @@ class icommit:
 			self.win.addnstr(y, colMark, '✓' if change.marked() else '', colType - colMark, attr)
 			self.win.addnstr(y, colType, svnwrap.status_codes.get(change.data['status'], '#'), colPath - colType - 1, attr)
 			self.win.addnstr(y, colPath, change.data['path'], width - colPath, attr)
-		iutil.render_list(self.win, self.changes, self.selectedChange, 2, height-3, width, render_change)
+		iutil.render_list(self.win, changes, self.selectedChange, 2, height-3, width, render_change)
 
 		# --- status bar --- #
 
@@ -110,7 +118,7 @@ class icommit:
 			w = min(len(self.confirmQuestion), width-2-(2*pad))
 			center = int(width/2)
 			left = center - int(w/2)
-			hexes.border(self.win, top, left, 4, w+2, 'Revert', clear=True)
+			hexes.border(self.win, top, left, 4, w+2, 'Confirm', clear=True)
 			self.win.addnstr(top+1, 1+left, self.confirmQuestion, w)
 			buttons = '[Y]es   [N]o'
 			self.win.addnstr(top+2, 1+center-int(len(buttons)/2), buttons, w, curses.A_REVERSE)
@@ -123,6 +131,15 @@ class icommit:
 			pady2 = 2*pady
 			hexes.border(self.win, pady, padx, height-pady2, width-padx2, header='Commit Message', clear=True)			
 			self.commitMessage.render(self.win, pady+1, padx+1, width-padx2-2, height-pady2-2, self.state == self.STATE_COMMIT_MESSAGE)
+
+		if self.tempMessage != None:
+			pad = 5
+			top = int(height/2) - 2
+			w = min(len(self.tempMessage), width-2-(2*pad))
+			center = int(width/2)
+			left = center - int(w/2)
+			hexes.border(self.win, top, left, 3, w+2, 'Please wait...', clear=True)
+			self.win.addnstr(top+1, 1+left, self.tempMessage, w)
 
 		if self.state != self.STATE_COMMIT_MESSAGE:
 			self.win.move(cursorY, cursorX)
@@ -147,12 +164,21 @@ class icommit:
 				cmd.append(c.data['path'])
 		cmd.extend(['--message', self.commitMessage.get_text()])
 		svnwrap.run(*cmd, output=svnwrap.OUT_TXT)
+
+	def visibleChanges(self):
+		return list(c for c in self.changes if not self.onlyMarked or c.marked())
 	
 	def loadStatus(self):
+
+		self.tempMessage = 'Loading status'
+		self.render()
+
 		self.info = svnwrap.info()
 		# TODO update instead of replace
 		self.changes = list(map(lambda c: change(self, c), svnwrap.status()))
 		self.selectedChange = None
+
+		self.tempMessage = None
 
 	def confirm(self, question, action):
 		self.state = self.STATE_CONFIRM
@@ -162,12 +188,13 @@ class icommit:
 	def loop(self, win):
 		self.win = win
 
+		self.render()
 		self.loadStatus()
 		
 		# input loop
 		while (True):
 			
-			self.renderAll()
+			self.render()
 			
 			# wait for input
 			ch = win.getch()
@@ -235,10 +262,19 @@ class icommit:
 						self.loadStatus()
 					elif ch == 32: # space
 						self.selectedChange.toggleMarked()
+						if self.onlyMarked:
+							vc = self.visibleChanges()
+							if not self.selectedChange in vc:
+								self.selectedChange = vc[0] if vc else None
 					elif char == 'c':
 						self.state = self.STATE_COMMIT_MESSAGE
 					elif char == 'u':
 						self.confirm('Are you sure you want to update?', lambda: lambda: svnwrap.run('update'))
+					elif char == 'x':
+						self.onlyMarked = not self.onlyMarked
+						vc = self.visibleChanges()
+						if not self.selectedChange in vc:
+							self.selectedChange = vc[0] if vc else None
 					else:
 						self.tempStatusBar = 'Unknown key ' + str(ch)
 			
