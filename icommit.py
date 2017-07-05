@@ -1,4 +1,5 @@
 import curses
+import curses.ascii
 import sys
 import os
 
@@ -79,7 +80,7 @@ class icommit:
 		changes = self.visibleChanges()
 
 		def render_change(y, change, is_sel):
-			attr = curses.A_DIM if self.state != self.STATE_NORMAL else (curses.A_REVERSE if is_sel else 0)
+			attr = curses.A_DIM if self.state != self.STATE_NORMAL or self.tempMessage else (curses.A_REVERSE if is_sel else 0)
 			if is_sel:
 				hexes.fill_line(self.win, y, 0, width, attr)
 			
@@ -166,7 +167,7 @@ class icommit:
 		svnwrap.run(*cmd, output=svnwrap.OUT_TXT)
 
 	def visibleChanges(self):
-		return list(c for c in self.changes if not self.onlyMarked or c.marked())
+		return [c for c in self.changes if not self.onlyMarked or c.marked()]
 	
 	def loadStatus(self):
 
@@ -175,7 +176,7 @@ class icommit:
 
 		self.info = svnwrap.info()
 		# TODO update instead of replace
-		self.changes = list(map(lambda c: change(self, c), svnwrap.status()))
+		self.changes = [change(self, c) for c in svnwrap.status()]
 		self.selectedChange = None
 
 		self.tempMessage = None
@@ -217,10 +218,10 @@ class icommit:
 				if self.state == self.STATE_CONFIRM:
 					
 					intermezzo = None
-					if ch == 121: # Y
+					if char == 'y':
 						intermezzo = self.confirmAction()
 
-					if ch == 121 or ch == 110: # Y or N
+					if char in 'yn':
 						self.state = self.STATE_NORMAL
 						self.confirmQuestion = None
 						self.confirmAction = None
@@ -228,16 +229,16 @@ class icommit:
 					if intermezzo: return intermezzo
 				
 				elif self.state == self.STATE_PRE_COMMIT:
-					if ch == 121: # Y
+					if char == 'y':
 						self.state = self.STATE_NORMAL
 						return lambda: self.commit()
-					if ch == 110: # N
+					if char == 'n':
 						self.state = self.STATE_NORMAL
-					if ch == 101: # E
+					if char == 'e':
 						self.state = self.STATE_COMMIT_MESSAGE
 					
 				elif self.state == self.STATE_COMMIT_MESSAGE:
-					if ch == 4: # Ctrl-D
+					if ch == curses.ascii.EOT: # Ctrl-D
 						self.state = self.STATE_PRE_COMMIT
 					else:
 						self.commitMessage.input(ch)
@@ -251,16 +252,16 @@ class icommit:
 						self.moveSelection(10)
 					elif ch == curses.KEY_PPAGE:
 						self.moveSelection(-10)
-					elif ch == 103: # G
+					elif char == 'g':
 						self.launchGDiff()
-					elif ch == 97: # A
+					elif char == 'a':
 						self.add()
-					elif ch == 114: # R
+					elif char == 'r':
 						revertFile = self.selectedChange.data['path']
 						self.confirm("Revert '" + revertFile + "'?", lambda: self.revert(revertFile))
 					elif ch == curses.KEY_F5:
 						self.loadStatus()
-					elif ch == 32: # space
+					elif char == ' ':
 						self.selectedChange.toggleMarked()
 						if self.onlyMarked:
 							vc = self.visibleChanges()
@@ -276,7 +277,7 @@ class icommit:
 						if not self.selectedChange in vc:
 							self.selectedChange = vc[0] if vc else None
 					else:
-						self.tempStatusBar = 'Unknown key ' + str(ch)
+						self.tempStatusBar = 'Unknown key ' + str(ch) + ' (' + char + ')'
 			
 		# end while
 

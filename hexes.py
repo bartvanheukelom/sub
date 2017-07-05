@@ -3,11 +3,30 @@
 import curses
 import util
 
+class TextBox:
+
+	def __init__(self):
+		self.text = ''
+		self.focused = False
+		pass
+
+	def render(self, win, y, x, width):
+		win.addnstr(y, x, self.text, width)
+
+	def input(self, ch):
+		if self.focused:
+			if ch == curses.KEY_BACKSPACE:
+				if self.text != '': self.text = self.text[:-1]
+			elif ch == ord('\n'):
+				return True
+			else:
+				self.text += chr(ch)
+		return False
+
 class TextArea:
 	
-	text = ['']
-	
 	def __init__(self):
+		self.text = ['']
 		pass
 		
 	def render(self, win, y, x, width, height, focused):

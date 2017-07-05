@@ -3,8 +3,7 @@ import hexes
 import util
 
 def render_list(win, lst, sel, listStart, listHeight, width, render_entry):
-    
-    util.log('render_list', lst)
+    if listHeight < 0: return
 
     # selected index
     curIndex = 0 if sel == None else lst.index(sel)
@@ -34,6 +33,7 @@ def render_list(win, lst, sel, listStart, listHeight, width, render_entry):
     #if offset > 0: win.addnstr(listStart, width-1, '↑', 1, curses.A_DIM)
     #if offset < overflow: win.addnstr(listStart+listHeight-1, width-1, '↓', 1, curses.A_DIM)
 
+    # scrollbar
     if overflow > 0 and listHeight > 2:
 
         for sy in range(0, listHeight):
