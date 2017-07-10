@@ -28,11 +28,21 @@ popd > /dev/null
 
 log="$HOME/.sub.log"
 
-PYTHONPATH="$sd/lib:$PYTHONPATH" python3 "$sd/sub.py" "$@" 2> "$log"
-result="$?"
+set +e
+while true; do
 
-if [[ "$result" != 0 ]]; then
-    echo "sub exited with status code $result - showing $log below"
-    echo "----------------------------------------"
-    cat "$log"
-fi
+    PYTHONPATH="$sd/lib:$PYTHONPATH" python3 "$sd/sub.py" "$@" 2> "$log"
+    result="$?"
+    
+    if [[ "$result" == 200 ]]; then
+        echo "Restart requested"
+    elif [[ "$result" != 0 ]]; then
+        echo "sub exited with status code $result - showing $log below"
+        echo "----------------------------------------"
+        cat "$log"
+        exit $result
+    else
+        break
+    fi
+
+done
