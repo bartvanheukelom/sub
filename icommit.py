@@ -2,6 +2,7 @@ import curses
 import curses.ascii
 import sys
 import os
+from os import path
 
 import svnwrap
 import util
@@ -10,15 +11,22 @@ import iutil
 
 class change:
 	
-	def __init__(self, icommit, data):
+	def __init__(self, icommit, path, isdir, status):
 		self.icommit = icommit
-		self.data = data
+		self.path = path
+		self.isdir = isdir
+		self.fullPath = ('/'.join(path) if path else '.') + ('/' if isdir else '')
+		self.status = status
 
 	def toggleMarked(self):
-		self.icommit.markedChanges ^= {self.data['path']}
+		if self.status == 'none': return
+		self.icommit.markedChanges ^= {self.fullPath}
 
 	def marked(self):
-		return self.data['path'] in self.icommit.markedChanges
+		return self.fullPath in self.icommit.markedChanges
+
+	def lastDir(self):
+		return self.path if self.isdir else self.path[:-1]
 
 class icommit:
 	
@@ -83,10 +91,21 @@ class icommit:
 			attr = curses.A_DIM if self.state != self.STATE_NORMAL or self.tempMessage else (curses.A_REVERSE if is_sel else 0)
 			if is_sel:
 				hexes.fill_line(self.win, y, 0, width, attr)
+
+			p = change.path;
+			# dimPart = ('/'.join(p[:-1]) + '/') if len(p) > 1 else ''
+			dimPart = ''.rjust(len(p)*4)
+			visPart = p[-1] if p else '.'
+			if change.isdir: visPart += '/'
+
+			colWidth = width - colPath
+			dimWidth = min(colWidth, len(dimPart))
+			visWidth = colWidth - dimWidth
 			
 			self.win.addnstr(y, colMark, '✓' if change.marked() else '', colType - colMark, attr)
-			self.win.addnstr(y, colType, svnwrap.status_codes.get(change.data['status'], '#'), colPath - colType - 1, attr)
-			self.win.addnstr(y, colPath, change.data['path'], width - colPath, attr)
+			self.win.addnstr(y, colType, svnwrap.status_codes.get(change.status, '#'), colPath - colType - 1, attr)
+			self.win.addnstr(y, colPath, dimPart, dimWidth, attr | curses.A_DIM)
+			self.win.addnstr(y, colPath+dimWidth, visPart, visWidth, attr)
 		iutil.render_list(self.win, changes, self.selectedChange, 2, height-3, width, render_change)
 
 		# --- status bar --- #
@@ -103,8 +122,8 @@ class icommit:
 			statusBar = '[↑|↓] Select  [C]ommit...  [F5] Refresh  [U]pdate  '
 			if self.selectedChange:
 				statusBar += '[Space] Unmark  ' if self.selectedChange.marked() else '[Space] Mark  '
-				if self.selectedChange.data['status'] == 'unversioned': statusBar += '[A]dd  '
-				if self.selectedChange.data['status'] != 'unversioned': statusBar += '[R]evert  '
+				if self.selectedChange.status == 'unversioned': statusBar += '[A]dd  '
+				if self.selectedChange.status != 'unversioned': statusBar += '[R]evert  '
 				statusBar += '[G]Diff  '
 			statusBar += '[Q]uit'
 		
@@ -148,10 +167,10 @@ class icommit:
 		self.win.refresh()
 
 	def launchGDiff(self):
-		svnwrap.run('diff','--diff-cmd','meld','--git',self.selectedChange.data['path'], wait=False)
+		svnwrap.run('diff','--diff-cmd','meld','--git',self.selectedChange.fullPath, wait=False)
 		
 	def add(self):
-		svnwrap.run('add',self.selectedChange.data['path'])
+		svnwrap.run('add',self.selectedChange.fullPath)
 		self.loadStatus()
 		
 	def revert(self, path):
@@ -162,8 +181,11 @@ class icommit:
 		cmd = ['commit']
 		for c in self.changes:
 			if c.marked():
-				cmd.append(c.data['path'])
-		cmd.extend(['--message', self.commitMessage.get_text()])
+				cmd.append(c.fullPath)
+		cmd.extend([
+			'--depth', 'files',
+			'--message', self.commitMessage.get_text()
+		])
 		svnwrap.run(*cmd, output=svnwrap.OUT_TXT)
 
 	def visibleChanges(self):
@@ -176,7 +198,34 @@ class icommit:
 
 		self.info = svnwrap.info()
 		# TODO update instead of replace
-		self.changes = [change(self, c) for c in svnwrap.status()]
+		self.changes = []
+		for s in svnwrap.status():
+			isdir = path.isdir(s['path'])
+			pp = s['path'].split('/')
+			if pp == ['.']: pp = []			
+			c = change(self, pp, isdir, s['status'])
+			util.log(repr(pp))
+
+			ld = c.lastDir()
+
+			if not pp: follows = True
+			elif not self.changes: follows = False
+			elif ld == self.changes[-1].lastDir(): follows = True
+			elif isdir and ld[0:-1] == self.changes[-1].lastDir(): follows = True
+			else: follows = False
+
+			if not follows:
+				
+				prevDir = [] if not self.changes else self.changes[-1].lastDir()
+				common = []
+				for i in range(0, min(len(prevDir), len(c.lastDir()))):
+					if prevDir[i] != ld[i]:
+						break
+					common.append(prevDir[i])
+
+				for i in range(len(common)+1, len(ld)+1):
+					self.changes.append(change(self, ld[0:i], True, 'none'))
+			self.changes.append(c)
 		self.selectedChange = None
 
 		self.tempMessage = None
@@ -231,7 +280,7 @@ class icommit:
 				elif self.state == self.STATE_PRE_COMMIT:
 					if char == 'y':
 						self.state = self.STATE_NORMAL
-						return lambda: self.commit()
+						return self.commit
 					if char == 'n':
 						self.state = self.STATE_NORMAL
 					if char == 'e':
@@ -257,10 +306,12 @@ class icommit:
 					elif char == 'a':
 						self.add()
 					elif char == 'r':
-						revertFile = self.selectedChange.data['path']
+						revertFile = self.selectedChange.fullPath
 						self.confirm("Revert '" + revertFile + "'?", lambda: self.revert(revertFile))
 					elif ch == curses.KEY_F5:
 						self.loadStatus()
+					elif ch == curses.KEY_F4:
+						sys.exit(200) # TODO via return
 					elif char == ' ':
 						self.selectedChange.toggleMarked()
 						if self.onlyMarked:
