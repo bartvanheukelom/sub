@@ -94,7 +94,7 @@ class commands:
 		print("usage:")
 		print("  1. gdiff [OPTIONS...]")
 		print("     Shorthand for `svn diff --diff-cmd meld --git $OPTIONS`")
-	@alias('gd')
+	@alias('gd','d')
 	@shorthelp('Graphical diff')
 	def gdiff(args):
 		svnwrap.run(*(['diff','--diff-cmd','meld','--git']+args))
@@ -102,6 +102,7 @@ class commands:
 
 	def help_up():
 		pass
+	@alias('u')
 	@shorthelp('Update')
 	def up(args):
 		svnwrap.run(*(['up']+args))
@@ -109,22 +110,23 @@ class commands:
 
 	def help_ilog():
 		pass
+	@alias('l')
 	@shorthelp('Interactive log')
 	def ilog(args):
 		ilog.start(args)
 			
 
-	def help_icommit():
+	def help_istatus():
 		pass
-	@alias('ici', 'istatus', 'ist')
-	@shorthelp('Interactive status and commit screen')
-	def icommit(args):
+	@alias('s', 's', 'ici', 'icommit')
+	@shorthelp('Interactive wc status screen, with commit, revert and update actions')
+	def istatus(args):
 		icommit.start(args)
 
 
 	def help_browse():
 		pass
-	@alias('ls')
+	@alias('ls', 'b')
 	@shorthelp('Repo browser')
 	def browse(args):
 		browse.start(args)
