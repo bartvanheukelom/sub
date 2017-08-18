@@ -173,9 +173,12 @@ class icommit:
 		svnwrap.run('add',self.selectedChange.fullPath)
 		self.loadStatus()
 		
-	def revert(self, path):
-		svnwrap.run('revert', path, output=svnwrap.OUT_TXT)
-		self.loadStatus()
+	def revert(self):
+		cmd = ['revert'] + \
+		      [c.fullPath for c in self.changes if c.marked()] + \
+		      ['--depth', 'files']
+		print('Reverting...')
+		svnwrap.run(*cmd)
 	
 	def commit(self):
 		cmd = ['commit']
@@ -186,7 +189,8 @@ class icommit:
 			'--depth', 'files',
 			'--message', self.commitMessage.get_text()
 		])
-		svnwrap.run(*cmd, output=svnwrap.OUT_TXT)
+		print('Committing...')
+		svnwrap.run(*cmd)
 
 	def visibleChanges(self):
 		return [c for c in self.changes if not self.onlyMarked or c.marked()]
@@ -306,8 +310,7 @@ class icommit:
 					elif char == 'a':
 						self.add()
 					elif char == 'r':
-						revertFile = self.selectedChange.fullPath
-						self.confirm("Revert '" + revertFile + "'?", lambda: self.revert(revertFile))
+						self.confirm("Revert marked changes?", lambda: lambda: self.revert())
 					elif ch == curses.KEY_F5:
 						self.loadStatus()
 					elif ch == curses.KEY_F4:
@@ -321,7 +324,10 @@ class icommit:
 					elif char == 'c':
 						self.state = self.STATE_COMMIT_MESSAGE
 					elif char == 'u':
-						self.confirm('Are you sure you want to update?', lambda: lambda: svnwrap.run('update'))
+						def up():
+							print('Updating...')
+							svnwrap.run('update')
+						self.confirm('Are you sure you want to update?', lambda: up)
 					elif char == 'x':
 						self.onlyMarked = not self.onlyMarked
 						vc = self.visibleChanges()
