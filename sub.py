@@ -3,6 +3,8 @@
 #
 # Sub - utility commands for Subversion (SVN)
 #
+#   must run through sub.sh
+#
 # https://github.com/bartvanheukelom/sub
 #
 
@@ -14,6 +16,7 @@ if __name__ == '__main__':
 		sys.exit(64)
 
 import svnwrap
+import os
 
 # submodules
 import ilog
@@ -26,9 +29,12 @@ def main(argv):
 	version = svnwrap.run('--version','--quiet', output=svnwrap.OUT_TXT).replace("\n","");
 	if not version.startswith("1.9."):
 		print("WARNING - svn version is " + version + ", but sub was tested with 1.9")
+
+	# the intended working directory is passed as an argument because it's lost when doing `pipenv run`
+	os.chdir(argv[1])
 		
 	# run the given command
-	cmd(resolve_aliases((argv[1:]+['help'])[0]))(argv[2:])
+	cmd(resolve_aliases((argv[2:]+['help'])[0]))(argv[3:])
 	
 def cmd(c):
 	try:

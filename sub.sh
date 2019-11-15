@@ -16,22 +16,18 @@ get_script_dir () {
      echo "$DIR"
 }
 
+wd=$(pwd)
 sd=$(get_script_dir)
 
-# install dependencies if needed
-pushd "$sd" > /dev/null
-    if [[ ! -d "lib/svn-0.3.44.dist-info" ]]; then
-        mkdir -p lib
-        pip3 install --target=lib svn==0.3.44
-    fi
-popd > /dev/null
-
 log="$HOME/.sub.log"
+
+cd "$sd"
+pipenv install
 
 set +e
 while true; do
 
-    PYTHONPATH="$sd/lib:$PYTHONPATH" python3 "$sd/sub.py" "$@" 2> "$log"
+    pipenv run python sub.py "$wd" "$@" 2> "$log"
     result="$?"
     
     if [[ "$result" == 200 ]]; then
